@@ -9,6 +9,7 @@
       font-family: Arial, sans-serif;
       padding: 20px;
       background-color: #f4f4f4;
+      margin: 0;
     }
     .container {
       background-color: white;
@@ -20,14 +21,30 @@
     }
     select, input, button {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       margin: 10px 0;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
     .doctor-info {
       background-color: #eef;
       padding: 10px;
       margin-top: 10px;
       border-radius: 6px;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .container {
+        padding: 15px;
+        width: 100%;
+      }
+      select, input, button {
+        font-size: 1rem;
+        padding: 10px;
+      }
     }
   </style>
 </head>
@@ -55,8 +72,8 @@
   </div>
 
   <script>
-    const BOT_TOKEN = '7801563155:AAGi7B0AnccT3LSY5rUjPK04ZsPTauO3Weg'; // <-- o'zingizniki bilan almashtiring
-    const CHAT_ID = '6793861035';     // <-- o'zingizniki bilan almashtiring
+    const BOT_TOKEN = "7801563155:AAGi7B0AnccT3LSY5rUjPK04ZsPTauO3Weg"; // <-- o'zgartiring
+    const CHAT_ID = "6793861035";     // <-- o'zgartiring
 
     const texts = {
       en: {
@@ -167,24 +184,8 @@
       });
     }
 
-    function sendTelegramMessage(message) {
-      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          chat_id: CHAT_ID,
-          text: message
-        })
-      });
-    }
-
     function submitForm() {
       const lang = document.getElementById("language").value;
-      document.getElementById("result").innerText = texts[lang].success;
-
       const name = document.getElementById("name").value;
       const surname = document.getElementById("surname").value;
       const phone = document.getElementById("phone").value;
@@ -192,11 +193,29 @@
       const category = document.getElementById("category").value;
       const doctor = document.getElementById("doctor").value;
 
-      const selectedDoctor = data[region][category].find(d => d.name === doctor);
+      const message = `🧾 Yangi so'rov:\n👤 Ism: ${name}\n👤 Familiya: ${surname}\n📞 Telefon: ${phone}\n📍 Viloyat: ${region}\n🏥 Yo'nalish: ${category}\n👨‍⚕️ Doktor: ${doctor}`;
 
-      const message = `\n🧾 Yangi murojaat:\n👤 F.I.Sh: ${name} ${surname}\n📞 Tel: ${phone}\n📍 Viloyat: ${region}\n🩺 Yo‘nalish: ${category}\n👨‍⚕️ Doktor: ${doctor}\n📲 Doktor telefoni: ${selectedDoctor.phone}\n🔗 Telegram: ${selectedDoctor.telegram}\n🏥 Ish joyi: ${selectedDoctor.workplace}`;
-
-      sendTelegramMessage(message);
+      fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: message
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            document.getElementById("result").innerText = texts[lang].success;
+          } else {
+            document.getElementById("result").innerText = "Xatolik yuz berdi (API)";
+          }
+        })
+        .catch(() => {
+          document.getElementById("result").innerText = "Xatolik yuz berdi (fetch)";
+        });
     }
 
     setLanguage();
