@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DoctorFinder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      background-color: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    select, input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .doctor-info {
+      background-color: #eef;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 id="title">Please select your language:</h2>
+    <select id="language" onchange="setLanguage()">
+      <option value="en">English</option>
+      <option value="uz">O‘zbek</option>
+      <option value="ru">Русский</option>
+    </select>
+
+    <input type="text" id="name" placeholder="Enter your name" />
+    <input type="text" id="surname" placeholder="Enter your surname" />
+    <input type="text" id="phone" placeholder="Enter your phone number" />
+
+    <select id="region"></select>
+    <select id="category"></select>
+    <select id="doctor"></select>
+
+    <div id="doctorInfo" class="doctor-info" style="display:none;"></div>
+
+    <button onclick="submitForm()">Submit</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    const BOT_TOKEN = '7801563155:AAGi7B0AnccT3LSY5rUjPK04ZsPTauO3Weg'; // <-- o'zingizniki bilan almashtiring
+    const CHAT_ID = '6793861035';     // <-- o'zingizniki bilan almashtiring
+
+    const texts = {
+      en: {
+        title: "Please select your language:",
+        name: "Enter your name",
+        surname: "Enter your surname",
+        phone: "Enter your phone number",
+        region: "Choose your region",
+        category: "Choose doctor category",
+        doctor: "Choose a doctor",
+        success: "Your data has been submitted."
+      },
+      uz: {
+        title: "Iltimos, tilni tanlang:",
+        name: "Ismingizni kiriting",
+        surname: "Familiyangizni kiriting",
+        phone: "Telefon raqamingizni kiriting",
+        region: "Viloyatingizni tanlang",
+        category: "Doktor turini tanlang",
+        doctor: "Doktorni tanlang",
+        success: "Ma'lumotlaringiz yuborildi."
+      },
+      ru: {
+        title: "Пожалуйста, выберите язык:",
+        name: "Введите ваше имя",
+        surname: "Введите вашу фамилию",
+        phone: "Введите ваш номер телефона",
+        region: "Выберите ваш регион",
+        category: "Выберите тип врача",
+        doctor: "Выберите врача",
+        success: "Ваши данные отправлены."
+      }
+    };
+
+    const data = {};
+
+    const regions = [
+      "Toshkent", "Andijon", "Fargʻona", "Namangan", "Samarqand", "Buxoro", "Xorazm", "Navoiy", "Qashqadaryo", "Surxondaryo", "Sirdaryo", "Jizzax"
+    ];
+
+    const categories = [
+      "Terapevt", "Pediatr", "Stomatolog", "Kardiolog", "Nevropatolog",
+      "Dermatolog", "Urolog", "Ginekolog", "LOR", "Endokrinolog"
+    ];
+
+    // Build data
+    regions.forEach(region => {
+      data[region] = {};
+      categories.forEach(category => {
+        data[region][category] = [];
+        for (let i = 1; i <= 5; i++) {
+          data[region][category].push({
+            name: `${category} ${i}`,
+            phone: `+9989012345${i}`,
+            telegram: `@${category.toLowerCase()}${i}`,
+            workplace: `${region} ${category} Clinic ${i}`
+          });
+        }
+      });
+    });
+
+    function setLanguage() {
+      const lang = document.getElementById("language").value;
+      document.getElementById("title").innerText = texts[lang].title;
+      document.getElementById("name").placeholder = texts[lang].name;
+      document.getElementById("surname").placeholder = texts[lang].surname;
+      document.getElementById("phone").placeholder = texts[lang].phone;
+
+      populateSelect("region", regions);
+      document.getElementById("region").onchange = () => {
+        populateSelect("category", Object.keys(data[document.getElementById("region").value]));
+        document.getElementById("category").onchange = () => {
+          const r = document.getElementById("region").value;
+          const c = document.getElementById("category").value;
+          const doctorSelect = document.getElementById("doctor");
+          doctorSelect.innerHTML = "";
+          data[r][c].forEach(doc => {
+            const option = document.createElement("option");
+            option.value = doc.name;
+            option.text = doc.name;
+            doctorSelect.appendChild(option);
+          });
+          doctorSelect.onchange = () => {
+            const selectedDoctor = data[r][c].find(d => d.name === doctorSelect.value);
+            if (selectedDoctor) {
+              document.getElementById("doctorInfo").innerHTML =
+                `<strong>Phone:</strong> ${selectedDoctor.phone}<br>` +
+                `<strong>Telegram:</strong> ${selectedDoctor.telegram}<br>` +
+                `<strong>Workplace:</strong> ${selectedDoctor.workplace}`;
+              document.getElementById("doctorInfo").style.display = "block";
+            }
+          };
+          doctorSelect.dispatchEvent(new Event("change"));
+        };
+        document.getElementById("category").dispatchEvent(new Event("change"));
+      };
+      document.getElementById("region").dispatchEvent(new Event("change"));
+    }
+
+    function populateSelect(id, items) {
+      const select = document.getElementById(id);
+      select.innerHTML = "";
+      items.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item;
+        option.text = item;
+        select.appendChild(option);
+      });
+    }
+
+    function sendTelegramMessage(message) {
+      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: message
+        })
+      });
+    }
+
+    function submitForm() {
+      const lang = document.getElementById("language").value;
+      document.getElementById("result").innerText = texts[lang].success;
+
+      const name = document.getElementById("name").value;
+      const surname = document.getElementById("surname").value;
+      const phone = document.getElementById("phone").value;
+      const region = document.getElementById("region").value;
+      const category = document.getElementById("category").value;
+      const doctor = document.getElementById("doctor").value;
+
+      const selectedDoctor = data[region][category].find(d => d.name === doctor);
+
+      const message = `\n🧾 Yangi murojaat:\n👤 F.I.Sh: ${name} ${surname}\n📞 Tel: ${phone}\n📍 Viloyat: ${region}\n🩺 Yo‘nalish: ${category}\n👨‍⚕️ Doktor: ${doctor}\n📲 Doktor telefoni: ${selectedDoctor.phone}\n🔗 Telegram: ${selectedDoctor.telegram}\n🏥 Ish joyi: ${selectedDoctor.workplace}`;
+
+      sendTelegramMessage(message);
+    }
+
+    setLanguage();
+  </script>
+</body>
+</html>
